@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `npm ci` installe exactement l'arbre du lockfile et echoue si
+      # package.json et package-lock.json divergent. Ne jamais le remplacer par
+      # `npm install` : la CI ne validerait plus l'arbre committe.
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Le SDK est un contrat : ce qui compte est ce que consomment les plugins,
+      # c'est-a-dire les declarations de types. On verifie qu'elles sont bien
+      # produites plutot que de supposer que `tsc` a fait son travail.
+      - name: Verifier les artefacts publies
+        run: |
+          test -f dist/index.js  || { echo "dist/index.js manquant"; exit 1; }
+          test -f dist/index.d.ts || { echo "dist/index.d.ts manquant"; exit 1; }
+          test -f dist/ui.js     || { echo "dist/ui.js manquant"; exit 1; }
+          echo "Artefacts presents :"
+          ls -la dist
+
+      # Simule l'empaquetage sans publier — montre exactement ce qui partirait
+      # sur npm (champ `files` du package.json) et fait echouer la CI si un
+      # fichier attendu manque.
+      - name: Contenu du paquet (dry-run)
+        run: npm pack --dry-run

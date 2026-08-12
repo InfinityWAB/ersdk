@@ -1,0 +1,80 @@
+name: Release
+
+# Publication declenchee par un tag `vX.Y.Z` uniquement.
+#
+# Pourquoi un tag et pas un push sur main : la version publiee doit correspondre
+# a un point precis de l'historique, identifiable et immuable. Publier sur chaque
+# push rendrait impossible de dire quel commit correspond a la version installee
+# chez un consommateur.
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install
+        run: npm ci
+
+      # Garde-fou : le tag fait foi, mais c'est `package.json` qui determine la
+      # version reellement publiee. Une divergence produirait un paquet dont le
+      # numero ne correspond a aucun tag — impossible a retrouver ensuite.
+      - name: Verifier que le tag correspond a la version du package
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          echo "tag=$TAG  package.json=$PKG"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::Le tag v$TAG ne correspond pas a la version $PKG du package.json."
+            echo "Corrigez package.json puis retaguez, ou supprimez ce tag."
+            exit 1
+          fi
+
+      # Refuse de republier une version deja presente sur le registre. npm
+      # rejetterait de toute facon, mais avec un message peu clair — autant
+      # echouer tot et explicitement.
+      - name: Verifier que la version n'est pas deja publiee
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          PKG=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$PKG" version >/dev/null 2>&1; then
+            echo "::error::$NAME@$PKG est deja publie. Incrementez la version."
+            exit 1
+          fi
+          echo "$NAME@$PKG n'existe pas encore sur le registre."
+
+      - name: Build
+        run: npm run build
+
+      - name: Contenu du paquet
+        run: npm pack --dry-run
+
+      # `--access public` est indispensable : un paquet scope (@…/…) est publie
+      # en `restricted` par defaut, ce qui exige un plan payant et le rendrait
+      # inaccessible aux consommateurs.
+      - name: Publier sur npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Resume
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          PKG=$(node -p "require('./package.json').version")
+          echo "### Publie : \`$NAME@$PKG\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`bash" >> "$GITHUB_STEP_SUMMARY"
+          echo "npm i -D $NAME@$PKG" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"

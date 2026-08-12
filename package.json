@@ -1,0 +1,32 @@
+{
+  "name": "@faso-erp/plugin-sdk",
+  "version": "1.0.0",
+  "description": "SDK de développement de plugins pour FasoOrchestra ERP (types AppAPI, classe de base, helpers, contrat de style).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": ">=5",
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5",
+    "@types/react": "^18",
+    "typescript": "^5"
+  }
+}
