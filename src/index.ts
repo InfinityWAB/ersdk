@@ -9,6 +9,7 @@ export type {
   KpiCardProps, KpiTrend,
   AreaChartProps, LineChartProps, BarChartProps, PieChartProps, PieSlice, ChartDataPoint, BaseChartProps,
   DataTableProps, Column, BulkAction,
+  KanbanBoardProps, KanbanColumn,
   BadgeProps, BadgeVariant,
   SpinnerProps,
   EmptyStateProps,
