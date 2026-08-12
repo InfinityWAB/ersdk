@@ -451,6 +451,35 @@ export interface AppAPI {
   store: SharedStore
 
   // ── Temps réel ────────────────────────────────────────────────────────────
+  /**
+   * Écoute un canal temps réel (WebSocket ou SSE selon le transport du canal).
+   *
+   * **S'abonner suffit : le canal est ouvert pour vous.** L'appel déclare le
+   * canal au registre du shell, qui réconcilie la connexion côté Rust pour
+   * l'inclure. Un plugin n'ouvre jamais de WebSocket lui-même et n'a aucune
+   * dépendance à une bibliothèque WS.
+   *
+   * **L'`Unsubscribe` retourné libère aussi le canal.** Les abonnements sont
+   * comptés par référence : tant qu'un plugin écoute un canal, la connexion
+   * reste ouverte ; le dernier départ la ferme. Ne pas appeler la fonction de
+   * désabonnement au déchargement laisse donc une connexion ouverte pour rien.
+   *
+   * Le plugin est en LECTURE SEULE sur ce flux — il ne choisit pas les canaux
+   * connectés, il déclare ceux qu'il veut écouter.
+   *
+   * ```ts
+   * const off = app.onRealtime('stock:updates', payload => {
+   *   console.log('mouvement de stock', payload)
+   * })
+   * app.addCleanup(off)   // indispensable
+   * ```
+   *
+   * Un canal inconnu du backend est tenté puis retenté avec backoff côté Rust,
+   * sans effet sur les autres canaux.
+   *
+   * @since 1.2.0 — déclaration et libération automatiques du canal.
+   *   Auparavant l'abonnement se contentait d'écouter un canal déjà connecté.
+   */
   onRealtime(channel: string, handler: (payload: unknown) => void): Unsubscribe
 
   // ── Synchronisation offline-first ─────────────────────────────────────────
