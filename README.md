@@ -132,3 +132,27 @@ la publication échouerait.
 
 Après une version majeure, prévenir ces dépôts : ils déclarent une plage semver
 et ne suivront pas automatiquement.
+
+### Si la publication renvoie 404
+
+```
+npm error 404 Not Found - PUT https://registry.npmjs.org/@infintywab%2fplugin-sdk
+```
+
+npm répond 404 au lieu de 403 pour ne pas révéler l'existence d'un scope privé.
+Le message ne distingue donc pas les causes. Dans l'ordre de fréquence :
+
+1. **L'organisation npm n'existe pas.** Une organisation GitHub n'en crée pas
+   une sur npm — les deux registres sont indépendants.
+   ```bash
+   npm login && npm org create infintywab
+   ```
+2. **Le jeton est un *granular access token* trop restreint.** Pour créer un
+   paquet qui n'existe pas encore, il doit couvrir le **scope entier** en
+   lecture-écriture, et non une liste de paquets. Un jeton *Automation* classique
+   n'a pas cette limite.
+3. **Le compte du jeton n'est pas membre de l'organisation**, ou y est simple
+   lecteur.
+
+Le workflow `release.yml` vérifie ces trois points avant de publier et affiche
+la cause exacte.

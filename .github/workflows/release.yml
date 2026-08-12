@@ -55,6 +55,44 @@ jobs:
           fi
           echo "$NAME@$PKG n'existe pas encore sur le registre."
 
+      # Diagnostic AVANT la publication. Sur un paquet scope inexistant, npm
+      # repond 404 a la place de 403 — deliberement, pour ne pas reveler
+      # l'existence d'un scope prive. Ce 404 ne dit donc pas si le scope
+      # n'existe pas, si le jeton est invalide, ou s'il n'a pas les droits.
+      # On leve l'ambiguite ici plutot que de laisser lire un message opaque.
+      - name: Verifier l'acces au registre
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NODE_AUTH_TOKEN}" ]; then
+            echo "::error::Le secret NPM_TOKEN est absent ou vide."
+            echo "Settings > Secrets and variables > Actions > New repository secret"
+            exit 1
+          fi
+
+          echo "── Compte authentifie ──"
+          if ! WHO=$(npm whoami 2>&1); then
+            echo "::error::Jeton invalide ou expire : $WHO"
+            echo "Regenerez un jeton npm de type Automation."
+            exit 1
+          fi
+          echo "npm whoami : $WHO"
+
+          SCOPE=$(node -p "require('./package.json').name.split('/')[0].replace('@','')")
+          echo "── Acces au scope @$SCOPE ──"
+          if npm org ls "$SCOPE" >/dev/null 2>&1; then
+            echo "OK : $WHO est membre de l'organisation $SCOPE."
+          else
+            echo "::error::Le compte $WHO n'a pas acces a l'organisation npm '$SCOPE'."
+            echo "Deux causes possibles :"
+            echo "  1. L'organisation n'existe pas  ->  npm org create $SCOPE"
+            echo "  2. Le jeton est un granular access token trop restreint."
+            echo "     Pour creer un paquet qui n'existe pas encore, il doit"
+            echo "     couvrir le SCOPE entier en lecture-ecriture, pas une"
+            echo "     liste de paquets."
+            exit 1
+          fi
+
       - name: Build
         run: npm run build
 
