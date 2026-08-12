@@ -1,4 +1,4 @@
-# @faso-erp/plugin-sdk
+# @infintywab/plugin-sdk
 
 SDK officiel pour écrire des plugins **FasoOrchestra ERP**. Fournit le contrat de
 types complet (`AppAPI`, `Manifest`, …), la classe de base `ERPPlugin`, le helper
@@ -13,7 +13,7 @@ de style** (`ui`, `TOKENS`).
 ## Installation
 
 ```bash
-npm i -D @faso-erp/plugin-sdk
+npm i -D @infintywab/plugin-sdk
 ```
 
 ## Build (émet les `.d.ts`)
@@ -28,7 +28,7 @@ complète** dans VS Code pour tout projet qui installe le paquet.
 ## Utilisation
 
 ```ts
-import { definePlugin, type AppAPI, ui } from '@faso-erp/plugin-sdk'
+import { definePlugin, type AppAPI, ui } from '@infintywab/plugin-sdk'
 
 export const manifest = {
   id: 'my-plugin',
@@ -102,8 +102,8 @@ aucun commit.
 
 ### Prérequis, une seule fois
 
-1. **Le scope `@faso-erp` doit exister sur npm** et appartenir au compte
-   publiant. Le créer via `npm org create faso-erp`, ou publier sous un autre
+1. **Le scope `@infintywab` doit exister sur npm** et appartenir au compte
+   publiant. Le créer via `npm org create infintywab`, ou publier sous un autre
    nom en modifiant le champ `name` du `package.json` **avant la première
    publication** — un nom publié ne se reprend pas.
 2. **Secret `NPM_TOKEN`** dans les paramètres du dépôt

@@ -1,5 +1,5 @@
 {
-  "name": "@faso-erp/plugin-sdk",
+  "name": "@infintywab/plugin-sdk",
   "version": "1.0.0",
   "description": "SDK de développement de plugins pour FasoOrchestra ERP (types AppAPI, classe de base, helpers, contrat de style).",
   "type": "module",

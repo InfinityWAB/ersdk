@@ -1,5 +1,5 @@
 /**
- * @faso-erp/plugin-sdk — Kit de développement de plugins pour FasoOrchestra ERP.
+ * @infintywab/plugin-sdk — Kit de développement de plugins pour FasoOrchestra ERP.
  */
 import type { QueryClient } from '@tanstack/react-query'
 import type { ComponentType } from 'react'
