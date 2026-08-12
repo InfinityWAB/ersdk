@@ -16,14 +16,22 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # Autorise GitHub a emettre le jeton OIDC du trusted publishing npm.
+      # Sans cette permission, npm retombe sur NODE_AUTH_TOKEN.
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
+      # Node 22 et npm >= 11.5.1 sont exiges par le trusted publishing.
+      # `setup-node` fournit encore npm 10 : on met a jour explicitement.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
+
+      - name: Mettre npm a niveau (trusted publishing)
+        run: npm install -g npm@latest && npm --version
 
       - name: Install
         run: npm ci
@@ -69,15 +77,16 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -z "${NODE_AUTH_TOKEN}" ]; then
-            echo "::error::Le secret NPM_TOKEN est absent ou vide."
-            echo "Settings > Secrets and variables > Actions > New repository secret"
-            exit 1
+            echo "Aucun NPM_TOKEN : publication attendue via trusted publishing (OIDC)."
+            echo "Verifiez que le Trusted Publisher est configure sur npmjs.com"
+            echo "  Package settings > Trusted Publisher > GitHub Actions"
+            echo "  depot : ${GITHUB_REPOSITORY} — workflow : release.yml"
+            exit 0
           fi
 
           echo "── Compte authentifie ──"
           if ! WHO=$(npm whoami 2>&1); then
             echo "::error::Jeton invalide ou expire : $WHO"
-            echo "Regenerez un jeton npm de type Automation."
             exit 1
           fi
           echo "npm whoami : $WHO"
@@ -88,14 +97,16 @@ jobs:
             echo "OK : $WHO est membre de l'organisation $SCOPE."
           else
             echo "::error::Le compte $WHO n'a pas acces a l'organisation npm '$SCOPE'."
-            echo "Deux causes possibles :"
             echo "  1. L'organisation n'existe pas  ->  npm org create $SCOPE"
-            echo "  2. Le jeton est un granular access token trop restreint."
-            echo "     Pour creer un paquet qui n'existe pas encore, il doit"
-            echo "     couvrir le SCOPE entier en lecture-ecriture, pas une"
-            echo "     liste de paquets."
+            echo "  2. Jeton trop restreint pour creer un paquet inexistant."
             exit 1
           fi
+
+          echo "── Avertissement 2FA ──"
+          echo "Si la publication echoue en EOTP, ce jeton exige une double"
+          echo "authentification et ne convient pas a une CI. npm ayant retire"
+          echo "les jetons Automation classiques, la voie recommandee est le"
+          echo "trusted publishing : configurez-le puis supprimez ce secret."
 
       - name: Build
         run: npm run build

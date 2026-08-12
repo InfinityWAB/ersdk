@@ -133,26 +133,48 @@ la publication échouerait.
 Après une version majeure, prévenir ces dépôts : ils déclarent une plage semver
 et ne suivront pas automatiquement.
 
-### Si la publication renvoie 404
+### Authentification de la CI — trusted publishing
 
+npm a retiré les jetons *Automation* classiques de son interface. Les jetons
+restants (*granular access tokens*) restent soumis à la double authentification
+sur les écritures, ce qu'une CI ne peut pas satisfaire — la publication échoue
+alors en `EOTP`.
+
+La voie recommandée est le **trusted publishing** : GitHub émet à chaque
+exécution un jeton OIDC éphémère, signé, lié au dépôt et au workflow. Aucun
+secret à stocker ni à faire tourner.
+
+**Configuration, une seule fois**, sur npmjs.com → page du paquet →
+*Settings* → *Trusted Publisher* → GitHub Actions :
+
+| Champ | Valeur |
+|---|---|
+| Organization | `InfinityWAB` |
+| Repository | `ersdk` |
+| Workflow filename | `release.yml` |
+| Allowed actions | `npm publish` |
+
+Le secret `NPM_TOKEN` devient alors inutile — **supprimez-le**, un secret
+inutilisé reste une surface d'attaque.
+
+Le workflow est déjà prêt : Node 22, npm à jour (≥ 11.5.1) et permission
+`id-token: write`.
+
+#### Amorçage
+
+Le Trusted Publisher se configure dans les réglages **du paquet**, qui doit donc
+exister. La toute première version se publie manuellement :
+
+```bash
+npm login
+npm publish --access public --otp=<code>
 ```
-npm error 404 Not Found - PUT https://registry.npmjs.org/@infintywab%2fplugin-sdk
-```
+
+C'est la seule fois où un code est saisi. Les suivantes passent par la CI.
+
+#### Si la publication renvoie 404
 
 npm répond 404 au lieu de 403 pour ne pas révéler l'existence d'un scope privé.
-Le message ne distingue donc pas les causes. Dans l'ordre de fréquence :
-
-1. **L'organisation npm n'existe pas.** Une organisation GitHub n'en crée pas
-   une sur npm — les deux registres sont indépendants.
-   ```bash
-   npm login && npm org create infintywab
-   ```
-2. **Le jeton est un *granular access token* trop restreint.** Pour créer un
-   paquet qui n'existe pas encore, il doit couvrir le **scope entier** en
-   lecture-écriture, et non une liste de paquets. Un jeton *Automation* classique
-   n'a pas cette limite.
-3. **Le compte du jeton n'est pas membre de l'organisation**, ou y est simple
-   lecteur.
-
-Le workflow `release.yml` vérifie ces trois points avant de publier et affiche
-la cause exacte.
+Causes possibles : l'organisation npm n'existe pas (`npm org create infintywab`),
+le jeton ne couvre pas le scope entier — nécessaire pour créer un paquet qui
+n'existe pas encore —, ou le compte n'est pas membre de l'organisation.
